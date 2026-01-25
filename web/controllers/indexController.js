@@ -1,5 +1,5 @@
-import helper from "../config/helper";
-import Script from "../models/script";
+import helper from "../config/helper.js";
+import Script from "../models/script.js";
 
 export const script = async (req, res) => {
     try {

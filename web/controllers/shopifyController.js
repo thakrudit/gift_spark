@@ -1,5 +1,5 @@
-import helper from "../config/helper";
-import FreeGift from "../models/freeGift";
+import helper from "../config/helper.js";
+import FreeGift from "../models/freeGift.js";
 
 export const createFreeGift = async (req, res) => {
     try {

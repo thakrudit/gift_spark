@@ -4,8 +4,17 @@ import { readFileSync } from "fs";
 import express from "express";
 import serveStatic from "serve-static";
 
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' });
+
 import shopify from "./shopify.js";
 import PrivacyWebhookHandlers from "./privacy.js";
+
+import connectDB from "./db.js";
+import cors from 'cors';
+
+import indexRoute from "./routes/indexRoute.js"
+import shopifyRoute from "./routes/shopifyRoute.js"
 
 const PORT = parseInt(
   process.env.BACKEND_PORT || process.env.PORT || "3000",
@@ -31,6 +40,13 @@ app.post(
   shopify.processWebhooks({ webhookHandlers: PrivacyWebhookHandlers })
 );
 
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 // If you are adding routes outside of the /api path, remember to
 // also add a proxy rule for them in web/frontend/vite.config.js
 
@@ -38,7 +54,8 @@ app.use("/api/*", shopify.validateAuthenticatedSession());
 
 app.use(express.json());
 
-
+app.use("/api/v1", indexRoute);
+app.use("/api/v1", shopifyRoute);
 
 app.use(shopify.cspHeaders());
 app.use(serveStatic(STATIC_PATH, { index: false }));

@@ -1,4 +1,5 @@
 import { Routes as ReactRouterRoutes, Route } from "react-router-dom";
+import AppLayout from "./AppLayout";
 
 /**
  * File-based routing.
@@ -17,7 +18,9 @@ import { Routes as ReactRouterRoutes, Route } from "react-router-dom";
 export default function Routes({ pages }) {
   const routes = useRoutes(pages);
   const routeComponents = routes.map(({ path, component: Component }) => (
-    <Route key={path} path={path} element={<Component />} />
+    <Route key={path} element={<AppLayout />}>
+      <Route key={path} path={path} element={<Component />} />
+    </Route>
   ));
 
   const NotFound = routes.find(({ path }) => path === "/notFound").component;

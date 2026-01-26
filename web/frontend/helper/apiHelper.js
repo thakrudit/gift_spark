@@ -1,13 +1,17 @@
-import DEVELOPMENT_CONFIG from "./config";
+import DEVELOPMENT_CONFIG from "./config.js";
 import axios from "axios";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 export default {
-    postRequest: (url, data) => {
+    postRequest: async (url, data) => {
+        const shopify = useAppBridge();
+        const token = await shopify.idToken();
         let config = {
             method: "post",
             url: DEVELOPMENT_CONFIG.base_url + url,
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
             },
             data: data,
             withCredentials: true
@@ -27,12 +31,15 @@ export default {
         return response;
     },
 
-    getRequest: function (url, data) {
+    getRequest: async function (url, data) {
+        const shopify = useAppBridge();
+        const token = await shopify.idToken();
         var config = {
             method: "get",
             url: DEVELOPMENT_CONFIG.base_url + url,
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
             },
             data: data,
         };

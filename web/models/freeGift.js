@@ -39,7 +39,7 @@ const productSchema = new mongoose.Schema({
     descriptionHtml: { type: String, default: "" },
     handle: { type: String, required: false },
     tags: [String],
-    status: { type: String, enum: ['DRAFT', 'ACTIVE', 'ARCHIVED'], required: false },
+    status: { type: String, enum: ['DRAFT', 'ACTIVE', 'ARCHIVED', 'UNLISTED'], required: false },
     productType: { type: String, default: "" },
     locationId: { type: String, required: true },
 

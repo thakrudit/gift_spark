@@ -262,3 +262,20 @@ export const createFreeGift = async (req, res) => {
         return helper.error(res, err)
     }
 }
+
+export const getFreeGift = async (req, res) => {
+    try {
+        const { shop } = req.query;
+
+        if (!shop) {
+            return helper.error(res, "Shop is Missing")
+        }
+        const data = await FreeGift.findOne({ shop }).select('id title media')
+        if (!data) {
+            return helper.error(res, "Data is empty no gift available")
+        }
+        return helper.success(res, "Free gift getting successfully", data)
+    } catch (err) {
+        return helper.error(res, err)
+    }
+};

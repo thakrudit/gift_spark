@@ -1,16 +1,16 @@
 import mongoose from "mongoose";
 
-const script_schema = new mongoose.Schema({
+const scriptSchema = new mongoose.Schema({
     shop: {
         type: String,
         required: true
     },
-    tagEnable: {
+    isEnable: {
         type: Boolean,
         required: true,
     },
 }, { timestamps: true })
 
-const Script = mongoose.model('script', script_schema)
+const Script = mongoose.model('script', scriptSchema)
 
 export default Script;

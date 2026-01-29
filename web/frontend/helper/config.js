@@ -1,5 +1,5 @@
 const DEVELOPMENT_CONFIG = {
-    base_url: "https://kai-boots-republicans-among.trycloudflare.com",
+    base_url: "https://cord-ruling-studying-publicity.trycloudflare.com",
     statusCode: 200,
     unAuthorized: 401,
     noPermission: 403,

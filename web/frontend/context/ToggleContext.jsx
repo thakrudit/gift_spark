@@ -7,10 +7,16 @@ const ToggleContext = createContext();
 
 export const ToggleProvider = ({ children }) => {
     const [enabled, setEnabled] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [isPopulating, setIsPopulating] = useState(false);
 
     const shopify = useAppBridge();
     const { shop } = shopify?.config || "";
+
+    const setLoading = (flag) => {
+        shopify.loading(flag);
+        setIsLoading(flag);
+    }
 
     const setPopulating = (flag) => {
         shopify.loading(flag);
@@ -18,7 +24,7 @@ export const ToggleProvider = ({ children }) => {
     };
 
     async function getScript(shop) {
-        setPopulating(true);
+        setLoading(true);
         let result = await apiHelper.getRequest(`/api/v1/get-script?shop=${shop}`);
         if (result?.code == DEVELOPMENT_CONFIG.statusCode) {
             if (result.body && result.body.isEnable !== undefined) {
@@ -26,16 +32,16 @@ export const ToggleProvider = ({ children }) => {
             } else {
                 setEnabled(false)
             }
-            setPopulating(false);
+            setLoading(false);
         } else {
             setEnabled(false)
-            setPopulating(false);
+            setLoading(false);
         }
     }
 
     useEffect(() => {
         getScript(shop);
-    }, [shop])
+    }, [shop, enabled])
 
     // Turn On Or Turn Off
     const handleToggle = useCallback(async (e) => {
@@ -63,7 +69,7 @@ export const ToggleProvider = ({ children }) => {
     }, [enabled]);
 
     return (
-        <ToggleContext.Provider value={{ enabled, handleToggle, isPopulating }}>
+        <ToggleContext.Provider value={{ enabled, handleToggle, isLoading, isPopulating }}>
             {children}
         </ToggleContext.Provider>
     )

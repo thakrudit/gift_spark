@@ -1,8 +1,8 @@
-import { LegacyCard, Text, SettingToggle, Badge } from "@shopify/polaris";
+import { LegacyCard, Text, SettingToggle, Badge, SkeletonBodyText } from "@shopify/polaris";
 import { useToggle } from "../../context/ToggleContext";
 
 export function Toggle() {
-  const { enabled, handleToggle, isPopulating } = useToggle();
+  const { enabled, handleToggle, isPopulating, isLoading } = useToggle();
 
   const contentStatus = enabled ? "Turn off" : "Turn on";
   const badgeStatus = enabled ? 'success' : undefined;
@@ -15,6 +15,12 @@ export function Toggle() {
       {badgeContent}
     </Badge>
   );
+
+  if (isLoading) {
+    return (
+      <SkeletonBodyText />
+    )
+  }
 
   return (
     <LegacyCard title="App Embeds">

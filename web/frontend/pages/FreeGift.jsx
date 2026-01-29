@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Layout, LegacyCard, Button, TextField, Thumbnail, Text, EmptyState } from "@shopify/polaris";
+import { Layout, LegacyCard, Button, TextField, Thumbnail, Text, EmptyState, SkeletonBodyText, TextContainer, SkeletonDisplayText } from "@shopify/polaris";
 import { ResourcePicker as ResourcePickerAction, Redirect } from "@shopify/app-bridge/actions";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { createApp } from "@shopify/app-bridge";
@@ -16,8 +16,6 @@ export default function FreeGift() {
     const app = createApp(config);
 
     const [resources, setResources] = useState([]);
-    const [resourcesError, setResourcesError] = useState("");
-
     const [gift, setGift] = useState({
         _id: "",
         id: "",
@@ -26,15 +24,22 @@ export default function FreeGift() {
     });
 
     const [title, setTitle] = useState("");
-    const [titleError, setTitleError] = useState("");
     const [giftUrl, setGiftUrl] = useState(svgImage);
-    const [totalInventoryError, setTotalInventoryError] = useState("");
+    const [error, setError] = useState({});
 
-    const [isLoading, setLoading] = useState(false);
-    const [isPopulating, setIsPopulating] = useState(false);
-    const setPopulating = (flag) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [isPopulating, setIsPopulating] = useState({
+        submit: false,
+        remove: false,
+        edit: false
+    });
+    const setLoading = (flag) => {
         shopify.loading(flag);
-        setIsPopulating(flag);
+        setIsLoading(flag);
+    }
+    const setPopulating = (flag, key) => {
+        shopify.loading(flag);
+        setIsPopulating(prev => ({ ...prev, [key]: flag }));
     };
 
     // Product ResourcePicker
@@ -69,13 +74,13 @@ export default function FreeGift() {
                 return [...updatedResources, ...newSelections];
             });
 
-            setResourcesError("");
-            setTotalInventoryError("");
+            setError(prev => ({ ...prev, resources: "" }))
+            setError(prev => ({ ...prev, totalInventory: "" }))
 
             if (selectedProducts?.length > 0) {
                 setTitle(`Free ${selectedProducts[0].title}`);
                 setGiftUrl(giftImage);
-                setTitleError("");
+                setError(prev => ({ ...prev, title: "" }))
             } else {
                 setTitle("");
                 setGiftUrl(svgImage);
@@ -97,15 +102,15 @@ export default function FreeGift() {
     // Set Title
     const handleChange = useCallback((newValue) => {
         setTitle(newValue);
-        setTitleError("");
+        setError(prev => ({ ...prev, title: "" }))
     }, []);
 
     async function getFreeGift(shop) {
-        setPopulating(true);
+        setLoading(true);
         let result = await apiHelper.getRequest(`/api/v1/get-free-gift?shop=${shop}`);
         if (result?.code === DEVELOPMENT_CONFIG.statusCode) {
             setGift(result?.body);
-            setPopulating(false);
+            setLoading(false);
         } else {
             setGift({
                 _id: "",
@@ -113,7 +118,7 @@ export default function FreeGift() {
                 title: "",
                 media: [],
             })
-            setPopulating(false);
+            setLoading(false);
         }
     }
 
@@ -126,25 +131,25 @@ export default function FreeGift() {
         let isValid = true;
 
         if (resources?.length == 0) {
-            setResourcesError(ERR_MESSAGE.EMPTY_PRODUCT);
+            setError(prev => ({ ...prev, resources: ERR_MESSAGE.EMPTY_PRODUCT }))
             isValid = false;
         } else {
-            setResourcesError("");
+            setError(prev => ({ ...prev, resources: "" }))
         }
 
         if (title.trim() == "") {
-            setTitleError(ERR_MESSAGE.REQUIRED_TITLE);
+            setError(prev => ({ ...prev, title: ERR_MESSAGE.REQUIRED_TITLE }))
             isValid = false;
         } else {
-            setTitleError("");
+            setError(prev => ({ ...prev, title: "" }))
         }
 
         if (resources?.length > 0) {
             if (resources[0].totalInventory == 0) {
-                setTotalInventoryError(ERR_MESSAGE.NULL_QUANTITY);
+                setError(prev => ({ ...prev, totalInventory: ERR_MESSAGE.NULL_QUANTITY }))
                 isValid = false;
             } else {
-                setTotalInventoryError("");
+                setError(prev => ({ ...prev, totalInventory: "" }))
             }
         }
 
@@ -156,73 +161,128 @@ export default function FreeGift() {
         if (!handleCheckGenerateGift()) {
             return;
         }
-        setPopulating(true);
+        setPopulating(true, "submit");
+        let data = JSON.stringify({
+            shop: shop,
+            title: title,
+            productPayload: resources[0]
+        })
+        let result = await apiHelper.postRequest("/api/v1/create-free-gift", data)
+        if (result?.code == DEVELOPMENT_CONFIG.statusCode) {
+            setGift(result?.body);
+            setResources([]);
+            setTitle("");
+            setGiftUrl(svgImage);
+            shopify.toast.show(result?.message);
+            setPopulating(false, "submit");
+        } else {
+            shopify.toast.show(result?.message, { isError: true });
+            setPopulating(false, "submit");
+        }
+    };
+
+    const onDelete = async (e) => {
+        e.preventDefault();
+        setPopulating(true, "remove");
 
         setTimeout(() => {
-            setPopulating(false);
+            setPopulating(false, "remove");
         }, 3000)
-    };
+    }
+
+    const onEdit = async (e) => {
+        e.preventDefault();
+        setPopulating(true, "edit");
+
+        setTimeout(() => {
+            setPopulating(false, "edit");
+        }, 3000)
+    }
+
+    const gftImg = gift?.media[0]?.originalSource || svgImage;
+
+    if (isLoading) {
+        return (
+            <Layout>
+                <Layout.Section>
+                    <LegacyCard sectioned>
+                        <TextContainer>
+                            <SkeletonDisplayText size="small" />
+                            <SkeletonBodyText />
+                        </TextContainer>
+                    </LegacyCard>
+
+                    <LegacyCard sectioned>
+                        <TextContainer>
+                            <SkeletonDisplayText size="small" />
+                            <SkeletonBodyText />
+                        </TextContainer>
+                    </LegacyCard>
+
+                    <LegacyCard sectioned>
+                        <SkeletonBodyText />
+                    </LegacyCard>
+
+                </Layout.Section>
+                <Layout.Section secondary></Layout.Section>
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
             <Layout.Section>
                 <LegacyCard sectioned>
                     <Button onClick={openProductPicker}>Select</Button>
-                    {resourcesError && (<div className="text-red-600 mt-2">{resourcesError}</div>)}
+                    {error?.resources && (<div className="text-red-600 mt-2">{error?.resources}</div>)}
                     <TextField
                         label="Product Title"
                         value={title}
                         onChange={handleChange}
                         autoComplete="off"
                     />
-                    {titleError && (<div className="text-red-600 mt-2">{titleError}</div>)}
+                    {error?.title && (<div className="text-red-600 mt-2">{error?.title}</div>)}
                 </LegacyCard>
 
                 <LegacyCard sectioned>
                     <Button
                         onClick={handleCreateGiftProduct}
                         disabled={!!gift?.id}
-                        loading={isPopulating}
+                        loading={isPopulating?.submit}
                     >
                         Create Gift
                     </Button>
-                    {totalInventoryError && (<div className="text-red-600 mt-2">{totalInventoryError}</div>)}
+
+                    {error?.totalInventory && (<div className="text-red-600 mt-2">{error?.totalInventory}</div>)}
                     <Thumbnail source={giftUrl} alt="Product Image" />
                 </LegacyCard>
 
                 <LegacyCard sectioned>
-                    {gift && gift?.id ? ( // && Object.keys(gift).length === 0
+                    {gift && gift?.id ? (
                         <>
-                            <div key={gift.id} className="gift-card-3">
-                                <Thumbnail source={gftImg} alt="Gift Img" />
-                                <Text variant="headingMd" as="h2">
-                                    {gift.title}
-                                </Text>
-                                <div className="icon-3">
-                                    <Button
-                                        aria-label="Delete gift card"
-                                        className="icon-large"
-                                        // onClick={(e) => onDelete(e, gift.id)}
-                                        loading={isLoading}
-                                    >
-                                        Remove
-                                    </Button>
-                                    <Button
-                                        aria-label="Delete gift card"
-                                        className="icon-large"
-                                    // onClick={() => onEdit(gift.id)}
-                                    >
-                                        Edit
-                                    </Button>
-                                </div>
-                            </div>
+                            <Thumbnail source={gftImg} alt="Gift Img" />
+                            <Text variant="headingMd" as="h2">
+                                {gift.title}
+                            </Text>
+                            <Button
+                                onClick={(e) => onDelete(e, gift.id)}
+                                // disabled={!!gift?.id}
+                                loading={isPopulating?.remove}
+                            >
+                                Remove
+                            </Button>
+                            <Button
+                                onClick={(e) => onEdit(e, gift.id)}
+                                // disabled={!!gift?.id}
+                                loading={isPopulating?.edit}
+                            >
+                                Edit
+                            </Button>
                         </>
                     ) : (
-                        <div className="gift-card-3">
-                            <Text variant="headingMd" as="h2">
-                                No Gift Available
-                            </Text>
-                        </div>
+                        <Text variant="headingMd" as="h2">
+                            No Gift Available
+                        </Text>
                     )}
                 </LegacyCard>
             </Layout.Section>

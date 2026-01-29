@@ -1,4 +1,5 @@
 import helper from "../config/helper.js";
+import shopify from "../shopify.js";
 import FreeGift from "../models/freeGift.js";
 
 export const createFreeGift = async (req, res) => {
@@ -102,6 +103,7 @@ export const createFreeGift = async (req, res) => {
             input: {
                 title: title,
                 published: true, // deprecated (2024-07)
+                status: "UNLISTED",
                 vendor: productPayload.vendor,
                 tags: productPayload.tags, // arr []
                 productOptions: productOptions,

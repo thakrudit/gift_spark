@@ -181,24 +181,42 @@ export default function FreeGift() {
         }
     };
 
-    const onDelete = async (e) => {
+    const onDelete = async (e, gId) => {
         e.preventDefault();
         setPopulating(true, "remove");
-
-        setTimeout(() => {
+        let data = JSON.stringify({
+            gId: gId,
+            shop: shop
+        })
+        let result = await apiHelper.postRequest("/api/v1/remove-free-gift", data)
+        if (result?.code == DEVELOPMENT_CONFIG.statusCode) {
+            setGift({
+                _id: "",
+                id: "",
+                title: "",
+                media: [],
+            })
+            shopify.toast.show(result?.message)
             setPopulating(false, "remove");
-        }, 3000)
+        } else {
+            shopify.toast.show(result?.message, { isError: true })
+            setPopulating(false, "remove");
+        }
     }
 
-    const onEdit = async (e) => {
+    const onEdit = async (e, gId) => {
         e.preventDefault();
         setPopulating(true, "edit");
-
-        setTimeout(() => {
-            setPopulating(false, "edit");
-        }, 3000)
+        const productId = gId.split("/").pop();
+        const redirect = Redirect.create(app);
+        redirect.dispatch(Redirect.Action.ADMIN_SECTION, {
+            name: Redirect.ResourceType.Product,
+            resource: {
+                id: productId,
+            },
+        })
+        setPopulating(false, "edit");
     }
-
     const gftImg = gift?.media[0]?.originalSource || svgImage;
 
     if (isLoading) {

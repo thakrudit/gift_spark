@@ -1,4 +1,5 @@
 import { DeliveryMethod } from "@shopify/shopify-api";
+import FreeGift from "./models/freeGift";
 
 /**
  * @type {{[key: string]: import("@shopify/shopify-api").WebhookHandler}}
@@ -83,4 +84,61 @@ export default {
       // }
     },
   },
+
+  PRODUCTS_DELETE: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: "/api/webhooks",
+    callback: async (topic, shop, body, webhookId) => {
+      const payload = JSON.parse(body);
+      let productId = `gid://shopify/Product/${payload.id}`
+      const deletedProduct = await FreeGift.findOneAndDelete({ id: productId })
+      // delete GoalFreeGift when product is deleted
+      // await GoalFreeGift.findOneAndDelete({ shop })
+    }
+  },
+  PRODUCTS_UPDATE: {
+    deliveryMethod: DeliveryMethod.Http,
+    callbackUrl: "/api/webhooks",
+    callback: async (topic, shop, body, webhookId) => {
+      const payload = JSON.parse(body);
+
+      const variantPayload = payload?.variants?.map(value => ({
+        id: value.admin_graphql_api_id,
+        title: value.title,
+        price: value.price,
+        position: value.position,
+        inventoryQuantity: value.inventory_quantity,
+      }))
+
+      const optionsPayload = payload?.options?.map(value => ({
+        id: `gid://shopify/ProductOption/${value.id}`,
+        name: value.name,
+        position: value.position,
+        values: value.values,
+      }))
+
+      const mediaPayload = payload?.media?.map(value => ({
+        originalSource: value.preview_image.src,
+        alt: value.alt,
+        mediaContentType: value.media_content_type,
+      }))
+
+      const existingProduct = await FreeGift.findOneAndUpdate(
+        { id: payload.admin_graphql_api_id },
+        {
+          title: payload.title,
+          vendor: payload.vendor,
+          descriptionHtml: payload.descriptionHtml,
+          handle: payload.handle,
+          tags: payload.tags,
+          status: payload.status.toUpperCase(),
+          productType: payload.productType,
+          variants: variantPayload,
+          options: optionsPayload,
+          media: mediaPayload,
+        },
+        { upsert: true, new: true }
+      )
+    }
+  }
 };

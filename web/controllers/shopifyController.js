@@ -43,7 +43,7 @@ export const createFreeGift = async (req, res) => {
 
         // STEP 2 : Create Product with options and media 
         const query = `
-         mutation CreateProductWithOptions($input: ProductInput!, $media: [CreateMediaInput!]) {
+         mutation productCreate($input: ProductInput!, $media: [CreateMediaInput!]) {
             productCreate(input: $input,  media: $media) {
                 product {
                     id
@@ -146,7 +146,7 @@ export const createFreeGift = async (req, res) => {
                         price: 0.0,
                         inventoryPolicy: "DENY",
                         inventoryQuantities: {
-                            availableQuantity: 10, //Make this dynamic
+                            availableQuantity: 10, // Make this dynamic
                             locationId: location_id
                         }
                     });
@@ -241,14 +241,14 @@ export const createFreeGift = async (req, res) => {
             options: product?.options.map(option => ({
                 id: option.id,
                 name: option.name,
-                position: option.position.toString(),
+                position: option.position,
                 values: option.values
             })),
             variants: productVariants?.map(variant => ({
                 id: variant.id,
                 title: variant.title,
                 price: variant.price,
-                position: variant.position.toString(),
+                position: variant.position,
                 inventoryQuantity: 10
             })),
             media: [  // Dynamic Save to DB
@@ -281,3 +281,44 @@ export const getFreeGift = async (req, res) => {
         return helper.error(res, err)
     }
 };
+
+export const removeFreeGift = async (req, res) => {
+    try {
+        const { gId, shop } = req.body;
+
+        const client = new shopify.api.clients.Graphql({
+            session: res.locals.shopify.session,
+        });
+
+        const query = `mutation {
+            productDelete(input: {id: "${gId}"}) {
+                deletedProductId
+                userErrors {
+                    field
+                    message
+                }
+            }
+        }`
+
+        const response = await client.query({
+            data: query
+        })
+        const productDelete = response?.body?.data?.productDelete;
+        const { deletedProductId, userErrors } = productDelete;
+
+        if (userErrors?.length > 0) {
+            return helper.error(res, userErrors[0]?.message);
+        }
+
+        // Optional... || product delete webhook
+        if (deletedProductId) {
+            await FreeGift.findOneAndDelete({ id: deletedProductId })
+        }
+        // delete GoalFreeGift when product is deleted
+        // await GoalFreeGift.findOneAndDelete({ shop })
+
+        return helper.success(res, "Free Gift Removed Successfully", deletedProductId)
+    } catch (err) {
+        return helper.error(res, err)
+    }
+}

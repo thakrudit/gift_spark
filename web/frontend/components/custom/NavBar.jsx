@@ -1,7 +1,10 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export function NavBar() {
+    const location = useLocation();
+    const isActiveRoute = location.pathname === '/setGoals' || location.pathname === '/freeGiftGoal';
+
     return (
         <div className="bg-gray-200 p-2 mb-2 rounded">
             <ul className="flex gap-2 space-y-1">
@@ -35,7 +38,7 @@ export function NavBar() {
                     <NavLink
                         to="/setGoals"
                         className={({ isActive }) =>
-                            `rounded block px-3 py-2 text-sm ${isActive
+                            `rounded block px-3 py-2 text-sm ${isActiveRoute
                                 ? "text-teal-600 border-l-2 border-teal-600 bg-white"
                                 : "text-gray-700"
                             }`
@@ -44,7 +47,7 @@ export function NavBar() {
                         Set Goals
                     </NavLink>
                 </li>
-                <li>
+                {/* <li>
                     <NavLink
                         to="/setting"
                         className={({ isActive }) =>
@@ -56,7 +59,7 @@ export function NavBar() {
                     >
                         Setting
                     </NavLink>
-                </li>
+                </li> */}
             </ul>
         </div>
     )

@@ -277,26 +277,30 @@ export default function FreeGift() {
 
                 <LegacyCard sectioned>
                     {gift && gift?.id ? (
-                        <>
-                            <Thumbnail source={gftImg} alt="Gift Img" />
-                            <Text variant="headingMd" as="h2">
-                                {gift.title}
-                            </Text>
-                            <Button
-                                onClick={(e) => onDelete(e, gift.id)}
-                                // disabled={!!gift?.id}
-                                loading={isPopulating?.remove}
-                            >
-                                Remove
-                            </Button>
-                            <Button
-                                onClick={(e) => onEdit(e, gift.id)}
-                                // disabled={!!gift?.id}
-                                loading={isPopulating?.edit}
-                            >
-                                Edit
-                            </Button>
-                        </>
+                        <div className="flex items-end justify-between">
+                            <div className="flex gap-2 items-center">
+                                <Thumbnail source={gftImg} alt="Gift Img" />
+                                <Text variant="headingMd" as="h2">
+                                    {gift.title}
+                                </Text>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={(e) => onDelete(e, gift.id)}
+                                    // disabled={!!gift?.id}
+                                    loading={isPopulating?.remove}
+                                >
+                                    Remove
+                                </Button>
+                                <Button
+                                    onClick={(e) => onEdit(e, gift.id)}
+                                    // disabled={!!gift?.id}
+                                    loading={isPopulating?.edit}
+                                >
+                                    Edit
+                                </Button>
+                            </div>
+                        </div>
                     ) : (
                         <Text variant="headingMd" as="h2">
                             No Gift Available

@@ -1,5 +1,5 @@
 import { DeliveryMethod } from "@shopify/shopify-api";
-import FreeGift from "./models/freeGift";
+import FreeGift from "./models/freeGift.js";
 
 /**
  * @type {{[key: string]: import("@shopify/shopify-api").WebhookHandler}}

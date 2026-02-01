@@ -1,6 +1,7 @@
 import helper from "../config/helper.js";
 import shopify from "../shopify.js";
 import FreeGift from "../models/freeGift.js";
+import GoalFreeGift from "../models/goalFreeGift.js";
 
 export const createFreeGift = async (req, res) => {
     try {
@@ -263,7 +264,7 @@ export const createFreeGift = async (req, res) => {
     } catch (err) {
         return helper.error(res, err)
     }
-}
+};
 
 export const getFreeGift = async (req, res) => {
     try {
@@ -318,6 +319,59 @@ export const removeFreeGift = async (req, res) => {
         // await GoalFreeGift.findOneAndDelete({ shop })
 
         return helper.success(res, "Free Gift Removed Successfully", deletedProductId)
+    } catch (err) {
+        return helper.error(res, err)
+    }
+};
+
+export const createGoalFreeGift = async (req, res) => {
+    try {
+        const { shop, title, productId, tergetType, minRequirement, minQuantity, eligibility, allItems, specificItems, message1, message2, } = req.body;
+
+        const specificItemsIds = specificItems?.map(product => product.id);
+
+        if (!shop) {
+            return helper.error(res, "Shop is required")
+        }
+        const chech_shop = await GoalFreeGift.findOne({ shop })
+        if (chech_shop) {
+            return helper.error(res, "With This Shop Goal Free Gift is Already Available")
+        }
+
+        const data = await GoalFreeGift.create({
+            shop,
+            title,
+            productId,
+            tergetType,
+            minRequirement,
+            minQuantity,
+
+            eligibility,
+            allItems,
+            specificItems: specificItemsIds,
+
+            message1,
+            message2,
+        })
+
+        return helper.success(res, "Create Free Gift Goal Successfully", data)
+    } catch (err) {
+        return helper.error(res, err)
+    }
+};
+
+export const getGoalFreeGift = async (req, res) => {
+    try {
+        const { shop } = req.query;
+
+        if (!shop) {
+            return helper.error(res, "Shop is Missing")
+        }
+        const data = await GoalFreeGift.findOne({ shop }).populate("productId")
+        if (!data) {
+            return helper.success(res, "Data is Empty", data)
+        }
+        return helper.success(res, "Goal free gift getting successfully ", data)
     } catch (err) {
         return helper.error(res, err)
     }

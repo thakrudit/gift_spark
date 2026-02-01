@@ -7,6 +7,7 @@ import apiHelper from '../helper/apiHelper';
 import DEVELOPMENT_CONFIG from '../helper/config';
 import { createApp } from '@shopify/app-bridge';
 import { svgImage } from '../assets';
+import ERR_MESSAGE from '../helper/errorHelper';
 
 export default function FreeGiftGoal() {
     const shopify = useAppBridge();
@@ -22,25 +23,29 @@ export default function FreeGiftGoal() {
     };
 
     const [fields, setFields] = useState({
-        title: "",
+        title: "Free Gift",
         productId: "",
         tergetType: ["mp1"],
         minRequirement: "0",
         minQuantity: "0",
-        eligibility: "all",
+        eligibility: ["all"],
         allItems: true,
         specificItems: [],
         message1: "",
         message2: "",
     });
+    const [error, setError] = useState({});
 
-    const [resources, setResources] = useState([]);
     const [search, setSearch] = useState("");
 
     const handleChange = (value, name) => {
         setFields(prevFields => ({
             ...prevFields,
             [name]: value
+        }));
+        setError(prevFields => ({
+            ...prevFields,
+            [name]: ""
         }))
     }
 
@@ -50,19 +55,11 @@ export default function FreeGiftGoal() {
         setIsLoading(flag);
     }
 
-    const [optionGift, setOptionGift] = useState({
-        _id: "",
-        id: "",
-        title: "",
-    });
+    const [optionGift, setOptionGift] = useState(null);
 
-    const options = [
-        {
-            label: optionGift?.title,
-            value: optionGift?._id,
-            key: optionGift?.id,
-        },
-    ];
+    const options = optionGift
+        ? [{ label: optionGift.title, value: optionGift._id, key: optionGift.id }]
+        : [];
 
     async function getGiftProduct() {
         setLoading(true);
@@ -79,10 +76,8 @@ export default function FreeGiftGoal() {
         getGiftProduct();
     }, [])
 
-    console.log("fields: ", fields)
-
     const openProductPicker = () => {
-        const productWithAllVariantsSelected = resources.map((product) => ({
+        const productWithAllVariantsSelected = fields.specificItems.map((product) => ({
             id: product.id,
         }));
 
@@ -96,32 +91,22 @@ export default function FreeGiftGoal() {
 
         const handleSelection = async (payload) => {
             const selectedProducts = payload.selection;
+            setFields((prev) => {
+                const prevIds = new Set(prev.specificItems.map((item) => item.id));
 
-            setResources((prevResources) => {
-                const prevProductIds = prevResources.map((product) => product.id);
-
-                const updatedResources = prevResources.filter((product) =>
-                    selectedProducts.some((selected) => selected.id === product.id)
+                const kept = prev.specificItems.filter((item) =>
+                    selectedProducts.some((selected) => selected.id === item.id)
                 );
 
-                const newSelections = selectedProducts.filter(
-                    (selected) => !prevProductIds.includes(selected.id)
-                );
+                const added = selectedProducts.filter((selected) => !prevIds.has(selected.id));
 
-                return [...updatedResources, ...newSelections];
-            });
+                return {
+                    ...prev,
+                    specificItems: [...kept, ...added],
+                };
+            })
 
-            // setError(prev => ({ ...prev, resources: "" }))
-            // setError(prev => ({ ...prev, totalInventory: "" }))
-
-            // if (selectedProducts?.length > 0) {
-            //     setTitle(`Free ${selectedProducts[0].title}`);
-            //     setGiftUrl(giftImage);
-            //     setError(prev => ({ ...prev, title: "" }))
-            // } else {
-            //     setTitle("");
-            //     setGiftUrl(svgImage);
-            // }
+            setError(prev => ({ ...prev, specificItems: "" }));
 
             picker.unsubscribe();
         };
@@ -136,14 +121,125 @@ export default function FreeGiftGoal() {
         picker.dispatch(ResourcePickerAction.Action.OPEN);
     };
 
+    // Remove Product From Picker
+    const handleRemove = async (id) => {
+        setFields((prev) => ({
+            ...prev,
+            specificItems: prev.specificItems.filter((item) => item.id !== id)
+        }))
+    };
+
     const [isPopulating, setIsPopulating] = useState();
-    const setPopulating = (flag, key) => {
+    const setPopulating = (flag) => {
         shopify.loading(flag);
         setIsPopulating(flag);
     };
 
+    let target = fields.tergetType[0] == "mp1" ? `you spend $ : ${fields.minRequirement}` : `minimum qunatity is : ${fields.minQuantity} `;
+    const defaultMessage1 = `Get a <Strong> ${fields.title} </Strong> when ${target}`;
+    const defaultMessage2 = `Congrats You Got a <Strong> ${fields.title} </Strong> !`;
+
+    useEffect(() => {
+        setFields((prev) => ({
+            ...prev,
+            message1: defaultMessage1,
+            message2: defaultMessage2,
+        }));
+    }, [fields.title, fields.tergetType, fields.minRequirement, fields.minQuantity]);
+
+    const handleValidate = () => {
+        let isValid = true;
+
+        const { title, productId, tergetType, minRequirement, minQuantity, eligibility, specificItems, message1, message2 } = fields;
+
+        if (title?.trim() == "") {
+            setError(prev => ({ ...prev, title: ERR_MESSAGE.GIFT_TITLE }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, title: "" }))
+        }
+
+        // if (productId?.trim() == "") {
+        //     setError(prev => ({ ...prev, productId: ERR_MESSAGE.SELECT_GIFT }))
+        //     isValid = false;
+        // } else {
+        //     setError(prev => ({ ...prev, productId: "" }))
+        // }
+        if (options?.length == 0) {
+            setError(prev => ({ ...prev, productId: ERR_MESSAGE.EMPTY_GIFT }))
+            isValid = false;
+        }
+        else if (productId?.trim() == "") {
+            setError(prev => ({ ...prev, productId: ERR_MESSAGE.SELECT_GIFT }))
+            isValid = false;
+        }
+        else {
+            setError(prev => ({ ...prev, productId: "" }))
+        }
+
+        if (tergetType[0] == "mp1" && minRequirement == "") {
+            setError(prev => ({ ...prev, minRequirement: ERR_MESSAGE.MIN_REQ }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, minRequirement: "" }))
+        }
+
+        if (tergetType[0] == "mp2" && minQuantity == "") {
+            setError(prev => ({ ...prev, minQuantity: ERR_MESSAGE.MIN_QTY }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, minQuantity: "" }))
+        }
+
+        if (eligibility[0] == "prerequisite" && specificItems?.length == 0) {
+            setError(prev => ({ ...prev, specificItems: ERR_MESSAGE.EMPTY_PRODUCT }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, specificItems: "" }))
+        }
+
+        if (message1?.trim() == "") {
+            setError(prev => ({ ...prev, message1: ERR_MESSAGE.MSG }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, message1: "" }))
+        }
+        if (message2?.trim() == "") {
+            setError(prev => ({ ...prev, message2: ERR_MESSAGE.MSG }))
+            isValid = false;
+        } else {
+            setError(prev => ({ ...prev, message2: "" }))
+        }
+
+        return isValid;
+    }
+
     const handleCreateGiftGoal = async (e) => {
         e.preventDefault();
+        if (!handleValidate()) {
+            return;
+        }
+        setPopulating(true);
+        let { tergetType, minRequirement, minQuantity, specificItems, eligibility, allItems, ...payload } = fields;
+        let data = JSON.stringify({
+            shop,
+            tergetType: fields.tergetType[0],
+            minRequirement: fields.tergetType[0] == "mp1" ? parseFloat(fields.minRequirement) : 0,
+            minQuantity: fields.tergetType[0] == "mp2" ? parseFloat(fields.minQuantity) : 0,
+            eligibility: fields.eligibility[0],
+            allItems: fields.eligibility[0] == "all" ? true : false,
+            specificItems: fields.eligibility[0] == "prerequisite" ? fields.specificItems : [],
+            ...payload
+        })
+        let result = await apiHelper.postRequest("/api/v1/create-gift-goal", data);
+        if (result.code == DEVELOPMENT_CONFIG.statusCode) {
+            setPopulating(false);
+            shopify.toast.show(result?.message);
+            navigate("/setGoals");
+        } else {
+            shopify.toast.show(result?.message, { isError: true });
+            setPopulating(false);
+        }
     }
 
     if (isLoading) {
@@ -206,6 +302,7 @@ export default function FreeGiftGoal() {
                         value={fields.title}
                         onChange={(value) => handleChange(value, "title")}
                     />
+                    {error?.title && (<div className="text-red-600 mt-2">{error?.title}</div>)}
                 </LegacyCard>
                 <LegacyCard sectioned title="Goal Reward">
                     <Select
@@ -215,6 +312,7 @@ export default function FreeGiftGoal() {
                         value={fields.productId}
                         onChange={(value) => handleChange(value, "productId")}
                     />
+                    {error?.productId && (<div className="text-red-600 mt-2">{error?.productId}</div>)}
                 </LegacyCard>
                 <LegacyCard sectioned title="Goal Target">
                     <ChoiceList
@@ -235,7 +333,7 @@ export default function FreeGiftGoal() {
                         selected={fields.tergetType}
                         onChange={(value) => handleChange(value, "tergetType")}
                     />
-                    {fields.tergetType == "mp1" && (
+                    {fields.tergetType[0] == "mp1" && (
                         <>
                             <TextField
                                 label="Minimum Requirement"
@@ -246,10 +344,11 @@ export default function FreeGiftGoal() {
                                 placeholder="0"
                                 autoComplete="off"
                             />
+                            {error?.minRequirement && (<div className="text-red-600 mt-2">{error?.minRequirement}</div>)}
                         </>
                     )}
 
-                    {fields.tergetType == "mp2" && (
+                    {fields.tergetType[0] == "mp2" && (
                         <>
                             <TextField
                                 label="Minimum Quantity"
@@ -259,6 +358,7 @@ export default function FreeGiftGoal() {
                                 placeholder="0"
                                 autoComplete="off"
                             />
+                            {error?.minQuantity && (<div className="text-red-600 mt-2">{error?.minQuantity}</div>)}
                         </>
                     )}
                 </LegacyCard>
@@ -272,7 +372,7 @@ export default function FreeGiftGoal() {
                         selected={fields.eligibility}
                         onChange={(value) => handleChange(value, "eligibility")}
                     />
-                    {fields.eligibility == "prerequisite" &&
+                    {fields.eligibility[0] == "prerequisite" &&
                         <>
                             <TextField
                                 type="Search"
@@ -288,42 +388,43 @@ export default function FreeGiftGoal() {
                                 }
                             />
 
-                            {resources?.length > 0 ? (
+                            {fields.specificItems?.length > 0 ? (
                                 <>
-                                    <div className="browse-rp">
-                                        <ResourceList
-                                            resourceName={{ singular: "product", plural: "products" }}
-                                            items={resources}
-                                            renderItem={(item) => {
-                                                const { id, title, vendor, images } = item;
-                                                const imageUrl =
-                                                    images?.[0]?.originalSrc || svgImage;
-                                                return (
-                                                    <ResourceItem
-                                                        id={id}
-                                                        accessibilityLabel={`View details for ${title}`}
-                                                        media={
-                                                            <Thumbnail source={imageUrl} alt="Thumbnail Image" />
-                                                        }
-                                                    >
+                                    <ResourceList
+                                        resourceName={{ singular: "product", plural: "products" }}
+                                        items={fields.specificItems}
+                                        renderItem={(item) => {
+                                            const { id, title, vendor, images } = item;
+                                            const imageUrl =
+                                                images?.[0]?.originalSrc || svgImage;
+                                            return (
+                                                <ResourceItem
+                                                    id={id}
+                                                    accessibilityLabel={`View details for ${title}`}
+                                                    media={
+                                                        <Thumbnail source={imageUrl} alt="Thumbnail Image" />
+                                                    }
+                                                >
+                                                    <div className="flex items-center justify-between">
                                                         <Text variant="bodyMd" fontWeight="bold" as="h3">
                                                             {title}
                                                         </Text>
                                                         <Button
                                                             plain
                                                             // icon={<Icon source={XIcon} color="inkLightest" />}
-                                                            // onClick={() => handleRemove(item.id)}
+                                                            onClick={() => handleRemove(item.id)}
                                                             style={{ marginLeft: "auto" }}
-                                                        />
-                                                    </ResourceItem>
-                                                );
-                                            }}
-                                        />
-                                    </div>
+                                                        >X</Button>
+                                                    </div>
+                                                </ResourceItem>
+                                            );
+                                        }}
+                                    />
                                 </>
                             ) : (
                                 <></>
                             )}
+                            {error?.specificItems && (<div className="text-red-600 mt-2">{error?.specificItems}</div>)}
                         </>
                     }
                 </LegacyCard >
@@ -335,6 +436,7 @@ export default function FreeGiftGoal() {
                         onChange={(value) => handleChange(value, "message1")}
                         autoComplete="off"
                     />
+                    {error?.message1 && (<div className="text-red-600 mt-2">{error?.message1}</div>)}
                     <TextField
                         label="Message when gift goal is met"
                         type='text'
@@ -342,6 +444,7 @@ export default function FreeGiftGoal() {
                         onChange={(value) => handleChange(value, "message2")}
                         autoComplete="off"
                     />
+                    {error?.message2 && (<div className="text-red-600 mt-2">{error?.message2}</div>)}
                 </LegacyCard>
                 <LegacyCard sectioned>
                     <Button onClick={handleCreateGiftGoal} loading={isPopulating}>

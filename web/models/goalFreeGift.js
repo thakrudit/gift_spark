@@ -6,7 +6,7 @@ const goalFreeGiftSchema = new mongoose.Schema({
         required: true
     },
     title: { type: String },
-    productId: [{ type: mongoose.Schema.Types.ObjectId, ref: 'freeproduct' }],
+    productId: [{ type: mongoose.Schema.Types.ObjectId, ref: 'freegift' }],
     tergetType: { type: String },
     minRequirement: { type: Number },
     minQuantity: { type: Number },
